@@ -10,6 +10,7 @@ from .benefit_calculation import (
     DiscountReason,
     DiscountTerms,
     HistoricalPayment,
+    MonthBounds,
     calculate_discount,
     estimate_monthly_discount_used,
     month_bounds,
@@ -34,6 +35,15 @@ class CardDiscountEstimate:
     reason: DiscountReason
 
 
+def validate_payment_inputs(*, amount: int, category: str, as_of: datetime) -> MonthBounds:
+    """Validate the proposed payment and return its Seoul month bounds in UTC."""
+    if type(amount) is not int or amount <= 0:
+        raise ValueError("결제금액은 양의 정수여야 합니다.")
+    if category not in Category.values:
+        raise ValueError("유효한 결제 업종을 선택하세요.")
+    return month_bounds(as_of)
+
+
 @transaction.atomic
 def estimate_card_discount(
     *,
@@ -48,11 +58,7 @@ def estimate_card_discount(
     Invalid payment inputs raise ValueError. Both a missing card and one owned
     by another user raise UserCard.DoesNotExist.
     """
-    if type(amount) is not int or amount <= 0:
-        raise ValueError("결제금액은 양의 정수여야 합니다.")
-    if category not in Category.values:
-        raise ValueError("유효한 결제 업종을 선택하세요.")
-    bounds = month_bounds(as_of)
+    bounds = validate_payment_inputs(amount=amount, category=category, as_of=as_of)
     user_card = UserCard.objects.get(pk=user_card_id, user_id=user_id)
 
     # Filter both months in UTC while keeping the Seoul month boundaries.
