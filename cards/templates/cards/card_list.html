@@ -1,0 +1,67 @@
+{% extends 'cards/base.html' %}
+
+{% block title %}내 카드 · CardPick{% endblock %}
+
+{% block content %}
+<section class="home-intro page-intro" aria-labelledby="card-list-title">
+    <div><h1 id="card-list-title">내 카드</h1><p>등록된 보유 카드 {{ owned_cards|length }}장</p></div>
+    <a class="button button-secondary" href="{% url 'cards:home' %}#payment-title">추천받기 <span aria-hidden="true">→</span></a>
+</section>
+
+{% for message in messages %}
+    <p class="notice notice-{{ message.level_tag }} page-notice" role="{% if message.level_tag == 'error' %}alert{% else %}status{% endif %}">{{ message }}</p>
+{% endfor %}
+
+<section id="add-card" class="panel dashboard-panel add-card" aria-labelledby="add-card-title">
+    <h2 id="add-card-title">카드 등록</h2>
+    {% if can_add_card or form.is_bound %}
+        <form action="{% url 'cards:card_add' %}" method="post" class="add-card-form">
+            {% csrf_token %}
+            {% include 'cards/includes/form_field.html' with field=form.card only %}
+            <button class="button button-primary" type="submit"{% if not can_add_card %} disabled{% endif %}>카드 등록</button>
+        </form>
+    {% endif %}
+    {% if not can_add_card %}<p class="dashboard-note">현재 등록할 수 있는 카드 상품이 없어요.</p>{% endif %}
+</section>
+
+{% if owned_cards %}
+    <ul class="owned-card-list" aria-label="보유 카드">
+        {% for owned in owned_cards %}
+            <li class="panel dashboard-panel owned-card">
+                <div class="owned-card-title">
+                    <span class="brand-mark" aria-hidden="true"></span>
+                    <div><p>{{ owned.card.issuer }}</p><h2>{{ owned.card.name }}</h2></div>
+                </div>
+                <ul class="benefit-tags" aria-label="주요 할인 혜택">
+                    {% for benefit in owned.card.benefits.all %}
+                        <li>{{ benefit.get_category_display }} {{ benefit.benefit_rate|floatformat:'-2' }}% 할인</li>
+                    {% empty %}
+                        <li>등록된 혜택 없음</li>
+                    {% endfor %}
+                </ul>
+                <div class="owned-card-actions">
+                    <a class="button button-secondary" href="{% url 'cards:card_detail' owned.pk %}" aria-label="{{ owned.card.name }} 카드 상세 보기">카드 상세</a>
+                    {% if owned.has_transactions %}
+                        <p class="dashboard-note">이용내역이 연결되어 삭제할 수 없어요.</p>
+                    {% else %}
+                        <details class="delete-card">
+                            <summary>삭제 확인</summary>
+                            <form method="post" action="{% url 'cards:card_delete' owned.pk %}">
+                                {% csrf_token %}
+                                <p><strong>{{ owned.card.name }}</strong> 카드를 내 카드에서 삭제할까요?</p>
+                                <button class="button button-secondary danger-button" type="submit">카드 삭제</button>
+                            </form>
+                        </details>
+                    {% endif %}
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <section class="panel empty-state" aria-labelledby="empty-cards-title">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <h2 id="empty-cards-title">등록된 카드가 없어요</h2>
+        {% if can_add_card %}<a class="button button-secondary" href="#add-card">첫 카드 등록</a>{% endif %}
+    </section>
+{% endif %}
+{% endblock %}

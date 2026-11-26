@@ -1,0 +1,91 @@
+{% extends 'cards/base.html' %}
+{% load static %}
+
+{% block title %}홈 · CardPick{% endblock %}
+{% block scripts %}<script src="{% static 'cards/recommendation.js' %}" defer></script>{% endblock %}
+
+{% block content %}
+<section class="home-intro" aria-labelledby="home-title">
+    <h1 id="home-title">오늘은 어떤 카드로 결제할까요?</h1>
+    <p>같은 소비, 더 큰 혜택. 나에게 가장 유리한 카드를 찾아보세요.</p>
+</section>
+<dl class="dashboard-summary" aria-label="보유 카드와 이용금액">
+    <div class="panel summary-item">
+        <dt>등록된 보유 카드</dt>
+        <dd>{% if card_count == None %}조회 불가{% else %}{{ card_count }}장{% endif %}</dd>
+        <dd class="summary-meta"><a class="summary-link" href="{% url 'cards:card_list' %}">내 카드 관리 <span aria-hidden="true">→</span></a></dd>
+    </div>
+    <div class="panel summary-item">
+        <dt>이번 달 카드 이용금액</dt>
+        <dd>{{ monthly_spending|default:'조회 불가' }}</dd>
+        <dd class="summary-meta">서울 시간 · 저장 거래 기준</dd>
+        <dd class="summary-meta"><a class="summary-link" href="{% url 'cards:transaction_list' %}">이용내역 보기 <span aria-hidden="true">→</span></a></dd>
+    </div>
+</dl>
+
+<div class="dashboard-grid">
+    <section class="panel dashboard-panel" aria-labelledby="payment-title">
+        <h2 id="payment-title">결제 상황</h2>
+        <form id="payment-form" class="dashboard-form" action="{% url 'cards:home' %}" method="post">
+            {% csrf_token %}
+            {% include 'cards/includes/form_field.html' with field=form.category only %}
+            {% include 'cards/includes/form_field.html' with field=form.amount only %}
+            <output for="{{ form.amount.id_for_label }}" id="amount-preview" class="amount-preview" hidden></output>
+            <div class="quick-amounts" id="quick-amounts" role="group" aria-label="결제금액 빠른 입력" hidden>
+                <button type="button" class="button button-secondary" data-amount="10000" aria-pressed="false">1만원</button>
+                <button type="button" class="button button-secondary" data-amount="30000" aria-pressed="false">3만원</button>
+                <button type="button" class="button button-secondary" data-amount="50000" aria-pressed="false">5만원</button>
+                <button type="button" class="button button-secondary" data-amount="100000" aria-pressed="false">10만원</button>
+            </div>
+            <button type="submit" class="button button-primary">나에게 맞는 카드 찾기</button>
+        </form>
+    </section>
+
+    <section class="panel dashboard-panel result-panel" aria-labelledby="recommendation-title">
+        <h2 id="recommendation-title">추천 결과</h2>
+        {% if recommendation_error %}
+            <p class="notice notice-error" role="alert">{{ recommendation_error }}</p>
+        {% elif recommendation.recommended_card %}
+            {% with card=recommendation.recommended_card %}
+                <div class="result-highlight">
+                    <div class="result-name">
+                        <p class="result-issuer">{{ card.issuer }}</p>
+                        <h3>{{ card.card_name }}</h3>
+                    </div>
+                    <div class="card-illustration" aria-hidden="true"><span>CardPick</span><span class="card-chip"></span></div>
+                    <div class="result-price"><span>예상 할인금액</span><strong>{{ estimated_discount }}</strong></div>
+                    <dl class="result-totals">
+                        <div><dt>예상 결제금액</dt><dd>{{ estimated_payment }}</dd></div>
+                        {% if additional_savings != None %}
+                            <div><dt>차순위 카드 대비 {% if recommendation.tied_for_first %}차액{% else %}추가 절약 예상액{% endif %}</dt><dd>{{ additional_savings }}</dd></div>
+                        {% endif %}
+                    </dl>
+                </div>
+            {% endwith %}
+            {% if recommendation.tied_for_first %}
+                <p class="result-reason">같은 예상 할인 혜택을 받을 수 있는 카드가 여러 장 있어요.</p>
+            {% endif %}
+            <p class="result-reason">{{ recommendation_reason }}</p>
+        {% else %}
+            <div class="result-empty">
+                <span class="brand-mark" aria-hidden="true"></span>
+                {% if card_count == 0 or recommendation.reason == 'no_cards' %}
+                    <p>등록된 카드가 없어요. 첫 번째 카드를 등록해 보세요.</p>
+                    <a class="button button-secondary" href="{% url 'cards:card_list' %}#add-card">첫 카드 등록</a>
+                {% elif recommendation.reason == 'no_positive_discount' %}
+                    <p>이번 결제에 예상 할인이 적용되는 보유 카드가 없습니다.</p>
+                {% elif form.errors %}
+                    <p>결제 업종과 금액을 확인한 뒤 다시 시도해 주세요.</p>
+                {% else %}
+                    <p>결제 업종과 금액을 입력하면 보유 카드의 예상 혜택을 비교해 드려요.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+        {% if recommendation %}<p class="dashboard-note">예상 할인은 저장된 거래와 현재 혜택 조건을 바탕으로 계산한 추정치예요.</p>{% endif %}
+    </section>
+</div>
+
+{% if comparisons %}
+    {% include 'cards/includes/recommendation_results.html' %}
+{% endif %}
+{% endblock %}

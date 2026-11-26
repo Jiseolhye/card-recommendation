@@ -1,0 +1,107 @@
+{% extends 'cards/base.html' %}
+{% load l10n tz %}
+
+{% block title %}이용내역 · CardPick{% endblock %}
+
+{% block content %}
+<header class="home-intro">
+    <h1>나의 카드 이용내역</h1>
+    <p>언제, 어디서, 얼마나 사용했는지 확인해 보세요.</p>
+</header>
+
+{% if load_failed %}
+    <section class="panel dashboard-panel">
+        <p class="notice notice-error" role="alert">이용내역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+    </section>
+{% else %}
+    <div class="transaction-overview">
+        <section class="panel dashboard-panel current-spending" aria-labelledby="current-spending-title">
+            <h2 id="current-spending-title">이번 달 전체 이용금액</h2>
+            <p class="spending-value">{{ current_total }}</p>
+            <p class="dashboard-note">{{ current_month|date:"Y년 n월" }} · {{ current_count }}건</p>
+            <p class="dashboard-note">서울 시간 · 저장 거래 기준</p>
+        </section>
+        <section class="panel dashboard-panel" aria-labelledby="transaction-filter-title">
+            <h2 id="transaction-filter-title">이용내역 조회</h2>
+            <form class="transaction-filter" method="get" action="{% url 'cards:transaction_list' %}">
+                {% include 'cards/includes/form_field.html' with field=form.month only %}
+                {% include 'cards/includes/form_field.html' with field=form.card only %}
+                <div class="transaction-filter-actions">
+                    <button type="submit" class="button button-primary">조회</button>
+                    <a class="button button-secondary" href="{% url 'cards:transaction_list' %}">필터 초기화</a>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    {% if form.errors %}
+        <p class="notice notice-error" role="alert">조회 조건을 확인하고 다시 시도해 주세요.</p>
+    {% else %}
+        <section class="panel dashboard-panel filtered-spending" aria-labelledby="filtered-spending-title">
+            <div>
+                <h2 id="filtered-spending-title">조회 조건 이용금액</h2>
+                <p class="dashboard-note">{{ selected_month|date:"Y년 n월" }} · {% if selected_card %}{{ selected_card.card.name }}{% else %}전체 카드{% endif %}</p>
+            </div>
+            <p class="filtered-total"><strong>{{ selected_total }}</strong> <span>{{ selected_count }}건</span></p>
+        </section>
+
+        {% if card_totals %}
+            <section class="panel dashboard-panel" aria-labelledby="card-spending-title">
+                <h2 id="card-spending-title">카드별 이용금액</h2>
+                <p class="dashboard-note">{{ selected_month|date:"Y년 n월" }} 전체 보유 카드 기준 · 조회 월 합계 {{ formatted_month_total }}</p>
+                <ul class="card-spending-list">
+                    {% for card in card_totals %}
+                        <li class="card-spending-row">
+                            <div class="card-spending-label"><strong>{{ card.name }}</strong> <span>{{ card.issuer }}</span></div>
+                            <div class="comparison-amount"><meter min="0" max="{{ month_total|default:1|unlocalize }}" value="{{ card.amount|unlocalize }}" aria-hidden="true"></meter></div>
+                            <p class="card-spending-total"><strong>{{ card.formatted_amount }}</strong> <span>{{ card.share }}%</span></p>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+
+        <section class="panel dashboard-panel transaction-history" aria-labelledby="transaction-history-title">
+            <h2 id="transaction-history-title">상세 이용내역</h2>
+            {% if transaction_groups %}
+                <div class="transaction-line transaction-columns" aria-hidden="true">
+                    <span>거래시각</span><span>가맹점</span><span>카드</span><span>업종</span><span>결제금액</span>
+                </div>
+                {% timezone 'Asia/Seoul' %}
+                    {% for group in transaction_groups %}
+                        <section class="transaction-day" aria-labelledby="transaction-day-{{ forloop.counter }}">
+                            <h3 id="transaction-day-{{ forloop.counter }}"><time datetime="{{ group.date|date:'Y-m-d' }}">{{ group.date|date:'Y년 n월 j일' }}</time></h3>
+                            <ul>
+                                {% for entry in group.entries %}
+                                    {% with payment=entry.payment %}
+                                        <li><dl class="transaction-line transaction-entry">
+                                            <div class="transaction-time"><dt>거래시각</dt><dd><time datetime="{{ payment.transaction_date|date:'c' }}">{{ payment.transaction_date|date:'H:i' }}</time></dd></div>
+                                            <div class="transaction-merchant"><dt>가맹점</dt><dd>{{ payment.merchant_name }}</dd></div>
+                                            <div class="transaction-card"><dt>카드</dt><dd>{{ payment.user_card.card.name }}</dd></div>
+                                            <div class="transaction-category"><dt>업종</dt><dd>{{ payment.get_category_display }}</dd></div>
+                                            <div class="transaction-money"><dt>결제금액</dt><dd>{{ entry.amount }}</dd></div>
+                                        </dl></li>
+                                    {% endwith %}
+                                {% endfor %}
+                            </ul>
+                        </section>
+                    {% endfor %}
+                {% endtimezone %}
+            {% else %}
+                <div class="empty-state transaction-empty">
+                    {% if not has_cards %}
+                        <p><strong>아직 등록된 카드가 없어요.</strong></p>
+                        <a class="button button-secondary" href="{% url 'cards:card_list' %}#add-card">내 카드 등록</a>
+                    {% elif not has_history %}
+                        <p><strong>아직 저장된 이용내역이 없어요.</strong></p>
+                    {% else %}
+                        <p><strong>조회된 이용내역이 없어요.</strong></p>
+                        <p>다른 카드 또는 조회 월을 선택해 보세요.</p>
+                        <a class="button button-secondary" href="{% url 'cards:transaction_list' %}">필터 초기화</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+{% endif %}
+{% endblock %}

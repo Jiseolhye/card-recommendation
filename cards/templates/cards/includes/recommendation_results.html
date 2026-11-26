@@ -1,0 +1,23 @@
+{% load l10n %}
+<section class="panel dashboard-panel comparison" aria-labelledby="comparison-title">
+    <h2 id="comparison-title">보유 카드 혜택 비교</h2>
+    <ol class="comparison-list">
+        {% for row in comparisons %}
+            <li class="comparison-row">
+                <div class="comparison-identity">
+                    <span class="rank">{{ row.rank }}</span>
+                    <div><h3>{{ row.card.card_name }}</h3><p>{{ row.card.issuer }}</p></div>
+                </div>
+                <div class="comparison-amount">
+                    <strong>예상 할인 {{ row.discount }}</strong>
+                    <meter min="0" max="{{ recommendation.estimated_discount|default:1|unlocalize }}" value="{{ row.card.estimate.estimated_discount|unlocalize }}" aria-hidden="true"></meter>
+                </div>
+                <div class="comparison-conditions">
+                    <p>전월실적 <strong>{{ row.spending_status }}</strong> <span class="condition-divider" aria-hidden="true">·</span> 최소 결제금액 <strong>{{ row.minimum_status }}</strong></p>
+                    <p>{{ row.reason }}</p>
+                </div>
+                <a class="button button-secondary" href="{% url 'cards:card_detail' row.card.user_card_id %}" aria-label="{{ row.card.card_name }} 상세 보기">상세 보기</a>
+            </li>
+        {% endfor %}
+    </ol>
+</section>

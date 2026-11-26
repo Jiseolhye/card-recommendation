@@ -1,0 +1,39 @@
+{% extends 'cards/base.html' %}
+{% load static %}
+
+{% block title %}로그인 · CardPick{% endblock %}
+{% block scripts %}<script src="{% static 'cards/auth.js' %}" defer></script>{% endblock %}
+
+{% block content %}
+<div class="auth-layout">
+    <section class="auth-intro" aria-labelledby="login-slogan">
+        <p id="login-slogan" class="hero-heading">같은 소비,<br><span>더 큰 혜택</span></p>
+        <p class="auth-tagline">결제하기 전, 나에게 가장 유리한 카드를 찾아보세요.</p>
+        <div class="card-art" aria-hidden="true">
+            <div class="art-card art-card-back"></div>
+            <div class="art-card art-card-front">
+                <span class="art-brand">CardPick</span>
+                <span class="art-chip"></span>
+                <span class="art-lines"></span>
+            </div>
+            <span class="art-check"></span>
+        </div>
+    </section>
+
+    <section class="panel auth-panel" aria-labelledby="login-title">
+        <h1 id="login-title">로그인</h1>
+        {% for message in messages %}
+            <p class="notice notice-{{ message.level_tag }}" role="status">{{ message }}</p>
+        {% endfor %}
+        <form method="post" action="{% url 'cards:login' %}" class="auth-form">
+            {% csrf_token %}
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+            {% if form.non_field_errors %}<div class="notice notice-error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            {% include 'cards/includes/form_field.html' with field=form.username only %}
+            {% include 'cards/includes/form_field.html' with field=form.password toggle_password=True only %}
+            <button class="button button-primary" type="submit">로그인</button>
+        </form>
+        <p class="auth-switch">처음이신가요? <a href="{% url 'cards:signup' %}">회원가입</a></p>
+    </section>
+</div>
+{% endblock %}

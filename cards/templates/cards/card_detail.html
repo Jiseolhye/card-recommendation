@@ -1,0 +1,48 @@
+{% extends 'cards/base.html' %}
+{% load l10n %}
+
+{% block title %}{{ card.name }} · CardPick{% endblock %}
+
+{% block content %}
+<div class="detail-navigation">
+    <a class="button button-secondary back-link" href="{% url 'cards:card_list' %}"><span aria-hidden="true">←&nbsp;</span> 내 카드</a>
+    <a class="button button-secondary" href="{% url 'cards:transaction_list' %}?card={{ user_card_id|unlocalize }}">이 카드의 이용내역</a>
+</div>
+<header class="home-intro detail-intro">
+    <div><p>{{ card.issuer }}</p><h1>{{ card.name }}</h1></div>
+    <div class="card-illustration" aria-hidden="true"><span>CardPick</span><span class="card-chip"></span></div>
+</header>
+<dl class="dashboard-summary" aria-label="저장 거래 기준 이용금액">
+    <div class="panel summary-item"><dt>전월 이용금액</dt><dd>{{ previous_spending }}</dd></div>
+    <div class="panel summary-item"><dt>이번 달 이용금액</dt><dd>{{ monthly_spending }}</dd></div>
+</dl>
+<section class="benefit-section" aria-labelledby="benefits-title">
+    <h2 id="benefits-title">업종별 할인 혜택</h2>
+    {% if benefits %}<p class="dashboard-note">월 할인 사용량과 잔여 한도는 저장 거래와 현재 혜택 조건 기준의 추정치예요.</p>{% endif %}
+    {% for benefit in benefits %}
+        <article class="panel dashboard-panel detail-benefit">
+            <h3>{{ benefit.category }} <span>{{ benefit.rate|floatformat:'-2' }}% 할인</span></h3>
+            <div class="benefit-columns">
+                <section>
+                    <h4>상품 혜택 조건</h4>
+                    <dl class="benefit-values">
+                        <div><dt>전월실적 기준</dt><dd>{{ benefit.required_spending }}</dd></div>
+                        <div><dt>최소 결제금액</dt><dd>{{ benefit.minimum_amount }}</dd></div>
+                        <div><dt>건별 할인 한도</dt><dd>{{ benefit.per_transaction_limit }}</dd></div>
+                        <div><dt>월 할인 한도</dt><dd>{{ benefit.monthly_limit }}</dd></div>
+                    </dl>
+                </section>
+                <section>
+                    <h4>이번 달 한도 추정</h4>
+                    <dl class="benefit-values">
+                        <div><dt>추정 할인 사용량</dt><dd>{{ benefit.estimated_used }}</dd></div>
+                        <div><dt>예상 잔여 한도</dt><dd>{{ benefit.remaining }}</dd></div>
+                    </dl>
+                </section>
+            </div>
+        </article>
+    {% empty %}
+        <div class="panel empty-state"><p>등록된 혜택 없음</p></div>
+    {% endfor %}
+</section>
+{% endblock %}
